@@ -1,3 +1,10 @@
+Welcome to Mocapa's fork of Mediapipe.
+
+It adds in gpu selection support. 
+
+------
+
+
 ---
 layout: forward
 target: https://developers.google.com/mediapipe

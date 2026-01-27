@@ -1,0 +1,9 @@
+diff a/mediapipe/tasks/python/core/base_options.py b/mediapipe/tasks/python/core/base_options.py	(rejected hunks)
+@@ -58,6 +61,7 @@ class BaseOptions:
+   model_asset_path: Optional[str] = None
+   model_asset_buffer: Optional[bytes] = None
+   delegate: Optional[Delegate] = None
++  gpu_device: Optional[Any] = None
+ 
+   @doc_controls.do_not_generate_docs
+   def to_pb2(self) -> _BaseOptionsProto:
