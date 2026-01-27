@@ -1,0 +1,740 @@
+diff --git a/.gitignore b/.gitignore
+index 525f0878e..795efb35f 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -5,3 +5,6 @@ mediapipe/provisioning_profile.mobileprovision
+ node_modules/
+ .configure.bazelrc
+ .user.bazelrc
++build
++mediapipe.egg-info
++dist
+\ No newline at end of file
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 000000000..1675543d7
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,87 @@
++{
++    "files.associations": {
++        "array": "cpp",
++        "string": "cpp",
++        "string_view": "cpp",
++        "ranges": "cpp",
++        "span": "cpp",
++        "any": "cpp",
++        "atomic": "cpp",
++        "bit": "cpp",
++        "bitset": "cpp",
++        "cctype": "cpp",
++        "cfenv": "cpp",
++        "charconv": "cpp",
++        "chrono": "cpp",
++        "cinttypes": "cpp",
++        "clocale": "cpp",
++        "cmath": "cpp",
++        "codecvt": "cpp",
++        "compare": "cpp",
++        "complex": "cpp",
++        "concepts": "cpp",
++        "condition_variable": "cpp",
++        "csetjmp": "cpp",
++        "csignal": "cpp",
++        "cstdarg": "cpp",
++        "cstddef": "cpp",
++        "cstdint": "cpp",
++        "cstdio": "cpp",
++        "cstdlib": "cpp",
++        "cstring": "cpp",
++        "ctime": "cpp",
++        "cwchar": "cpp",
++        "cwctype": "cpp",
++        "deque": "cpp",
++        "forward_list": "cpp",
++        "list": "cpp",
++        "map": "cpp",
++        "set": "cpp",
++        "unordered_map": "cpp",
++        "unordered_set": "cpp",
++        "vector": "cpp",
++        "exception": "cpp",
++        "algorithm": "cpp",
++        "functional": "cpp",
++        "iterator": "cpp",
++        "memory": "cpp",
++        "memory_resource": "cpp",
++        "numeric": "cpp",
++        "optional": "cpp",
++        "random": "cpp",
++        "ratio": "cpp",
++        "regex": "cpp",
++        "system_error": "cpp",
++        "tuple": "cpp",
++        "type_traits": "cpp",
++        "utility": "cpp",
++        "hash_map": "cpp",
++        "hash_set": "cpp",
++        "slist": "cpp",
++        "format": "cpp",
++        "fstream": "cpp",
++        "future": "cpp",
++        "initializer_list": "cpp",
++        "iomanip": "cpp",
++        "iosfwd": "cpp",
++        "iostream": "cpp",
++        "istream": "cpp",
++        "limits": "cpp",
++        "mutex": "cpp",
++        "new": "cpp",
++        "numbers": "cpp",
++        "ostream": "cpp",
++        "scoped_allocator": "cpp",
++        "semaphore": "cpp",
++        "sstream": "cpp",
++        "stdexcept": "cpp",
++        "stdfloat": "cpp",
++        "stop_token": "cpp",
++        "streambuf": "cpp",
++        "thread": "cpp",
++        "typeindex": "cpp",
++        "typeinfo": "cpp",
++        "valarray": "cpp",
++        "variant": "cpp"
++    }
++}
+\ No newline at end of file
+diff --git a/dist/mediapipe-0.10.22.dev0-cp311-cp311-linux_x86_64.whl b/dist/mediapipe-0.10.22.dev0-cp311-cp311-linux_x86_64.whl
+new file mode 100644
+index 000000000..661ead002
+Binary files /dev/null and b/dist/mediapipe-0.10.22.dev0-cp311-cp311-linux_x86_64.whl differ
+diff --git a/mediapipe/__init__.py b/mediapipe/__init__.py
+index bf29fed39..4b20712fa 100644
+--- a/mediapipe/__init__.py
++++ b/mediapipe/__init__.py
+@@ -11,3 +11,16 @@
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
++
++from mediapipe.python import *
++import mediapipe.python.solutions as solutions 
++import mediapipe.tasks.python as tasks
++
++
++del framework
++del gpu
++del modules
++del python
++del mediapipe
++del util
++__version__ = 'dev'
+diff --git a/mediapipe/__pycache__/__init__.cpython-313.pyc b/mediapipe/__pycache__/__init__.cpython-313.pyc
+new file mode 100644
+index 000000000..65aa7b99c
+Binary files /dev/null and b/mediapipe/__pycache__/__init__.cpython-313.pyc differ
+diff --git a/mediapipe/gpu/gl_context.h b/mediapipe/gpu/gl_context.h
+index e491bb9b0..9f4b4dad4 100644
+--- a/mediapipe/gpu/gl_context.h
++++ b/mediapipe/gpu/gl_context.h
+@@ -22,6 +22,8 @@
+ #include <functional>
+ #include <memory>
+ #include <type_traits>
++#include <EGL/egl.h>
++#include <EGL/eglext.h>
+ 
+ #include "absl/base/attributes.h"
+ #include "absl/base/thread_annotations.h"
+@@ -41,6 +43,7 @@
+ #include "mediapipe/gpu/gl_base.h"
+ #include "mediapipe/gpu/gpu_buffer_format.h"
+ 
++
+ #ifdef __APPLE__
+ #include <CoreVideo/CoreVideo.h>
+ 
+@@ -167,14 +170,15 @@ class GlContext : public std::enable_shared_from_this<GlContext> {
+   //
+   // If create_thread is true, the context will create a thread and run all
+   // OpenGL tasks on it.
+-  static StatusOrGlContext Create(std::nullptr_t nullp, bool create_thread);
++  static StatusOrGlContext Create(std::nullptr_t nullp, bool create_thread,
++                                  int gpu_device = -1);
+   static StatusOrGlContext Create(const GlContext& share_context,
+-                                  bool create_thread);
++                                  bool create_thread, int gpu_device = -1);
+   static StatusOrGlContext Create(PlatformGlContext share_context,
+-                                  bool create_thread);
++                                  bool create_thread, int gpu_device = -1);
+ #if HAS_EAGL
+   static StatusOrGlContext Create(EAGLSharegroup* sharegroup,
+-                                  bool create_thread);
++                                  bool create_thread, int gpu_device = -1);
+ #endif  // HAS_EAGL
+ 
+   // Returns the GlContext that is current on this thread. May return nullptr.
+@@ -360,6 +364,7 @@ class GlContext : public std::enable_shared_from_this<GlContext> {
+   EGLConfig config_;
+   EGLSurface surface_ = EGL_NO_SURFACE;
+   EGLContext context_ = EGL_NO_CONTEXT;
++  int gpu_device_ = -1;
+ #elif HAS_EAGL
+   absl::Status CreateContext(EAGLSharegroup* sharegroup);
+ 
+diff --git a/mediapipe/gpu/gl_context_eagl.cc b/mediapipe/gpu/gl_context_eagl.cc
+index 5beb9d49f..0a958296f 100644
+--- a/mediapipe/gpu/gl_context_eagl.cc
++++ b/mediapipe/gpu/gl_context_eagl.cc
+@@ -30,22 +30,26 @@
+ namespace mediapipe {
+ 
+ GlContext::StatusOrGlContext GlContext::Create(std::nullptr_t nullp,
+-                                               bool create_thread) {
+-  return Create(static_cast<EAGLSharegroup*>(nil), create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(static_cast<EAGLSharegroup*>(nil), create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(const GlContext& share_context,
+-                                               bool create_thread) {
+-  return Create(share_context.context_.sharegroup, create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(share_context.context_.sharegroup, create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(EAGLContext* share_context,
+-                                               bool create_thread) {
+-  return Create(share_context.sharegroup, create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(share_context.sharegroup, create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(EAGLSharegroup* sharegroup,
+-                                               bool create_thread) {
++                                               bool create_thread,
++                                               int /*gpu_device*/) {
+   std::shared_ptr<GlContext> context(new GlContext());
+   MP_RETURN_IF_ERROR(context->CreateContext(sharegroup));
+   MP_RETURN_IF_ERROR(context->FinishInitialization(create_thread));
+diff --git a/mediapipe/gpu/gl_context_egl.cc b/mediapipe/gpu/gl_context_egl.cc
+index 48b6192b2..e1ed2cd97 100644
+--- a/mediapipe/gpu/gl_context_egl.cc
++++ b/mediapipe/gpu/gl_context_egl.cc
+@@ -13,6 +13,7 @@
+ // limitations under the License.
+ 
+ #include <utility>
++#include <vector>
+ 
+ #include "absl/log/absl_check.h"
+ #include "absl/log/absl_log.h"
+@@ -22,6 +23,7 @@
+ #include "mediapipe/framework/port/ret_check.h"
+ #include "mediapipe/framework/port/status.h"
+ #include "mediapipe/framework/port/status_builder.h"
++// #include "mediapipe/gpu/egl_base.h"
+ #include "mediapipe/gpu/gl_context.h"
+ #include "mediapipe/gpu/gl_context_internal.h"
+ 
+@@ -72,13 +74,14 @@ static void EnsureEglThreadRelease() {
+                       reinterpret_cast<void*>(0xDEADBEEF));
+ }
+ 
++// grabs default EGL display and initialises EGL on it, returns paltform duiaplays connectsion'
+ static absl::StatusOr<EGLDisplay> GetInitializedDefaultEglDisplay() {
+-  EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+-  RET_CHECK(display != EGL_NO_DISPLAY)
++  EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY); // get egl display , if no display return error
++  RET_CHECK(display != EGL_NO_DISPLAY) // egl defauly displat gets whatever the platform considers as default
+       << "eglGetDisplay() returned error " << std::showbase << std::hex
+       << eglGetError();
+ 
+-  EGLint major = 0;
++  EGLint major = 0; // makes EGL code portable as it is a 32bit signed int type, and guarantees same size on all platforms (even 64 bit ones)
+   EGLint minor = 0;
+   EGLBoolean egl_initialized = eglInitialize(display, &major, &minor);
+   RET_CHECK(egl_initialized) << "Unable to initialize EGL";
+@@ -88,32 +91,68 @@ static absl::StatusOr<EGLDisplay> GetInitializedDefaultEglDisplay() {
+   return display;
+ }
+ 
+-static absl::StatusOr<EGLDisplay> GetInitializedEglDisplay() {
+-  auto status_or_display = GetInitializedDefaultEglDisplay();
+-  return status_or_display;
++static absl::StatusOr<EGLDisplay> GetInitializedEglDisplay(int device) {
++  if (device < 0) {
++    return GetInitializedDefaultEglDisplay();
++  }
++  auto eglQueryDevicesEXT = // load required extension entry points at runtime
++      reinterpret_cast<PFNEGLQUERYDEVICESEXTPROC>(
++          eglGetProcAddress("eglQueryDevicesEXT"));
++  auto eglGetPlatformDisplayEXT =
++      reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
++          eglGetProcAddress("eglGetPlatformDisplayEXT"));
++  RET_CHECK(eglQueryDevicesEXT && eglGetPlatformDisplayEXT)
++      << "EGL device enumeration not supported";
++  EGLint num_devices = 0;
++  eglQueryDevicesEXT(0, nullptr, &num_devices); // checks how many devices exist
++  RET_CHECK_GT(num_devices, device)
++      << "GPU device index out of range";
++  std::vector<EGLDeviceEXT> devices(num_devices); // writes array of EGLDeviceEXT handles
++  eglQueryDevicesEXT(num_devices, devices.data(), &num_devices);
++  EGLDisplay display = // pin display to specific gpu device
++      eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT,
++                               devices[device], nullptr);
++  RET_CHECK(display != EGL_NO_DISPLAY)
++      << "eglGetPlatformDisplayEXT() returned error " << std::showbase
++      << std::hex << eglGetError();
++
++  EGLint major = 0;
++  EGLint minor = 0;
++  EGLBoolean egl_initialized = eglInitialize(display, &major, &minor);
++  RET_CHECK(egl_initialized) << "Unable to initialize EGL";
++  ABSL_LOG(INFO) << "Successfully initialized EGL. Major : " << major
++                 << " Minor: " << minor;
++  return display;
+ }
+ 
+ }  // namespace
+ 
+ GlContext::StatusOrGlContext GlContext::Create(std::nullptr_t nullp,
+-                                               bool create_thread) {
+-  return Create(EGL_NO_CONTEXT, create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(EGL_NO_CONTEXT, create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(const GlContext& share_context,
+-                                               bool create_thread) {
+-  return Create(share_context.context_, create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(share_context.context_, create_thread, gpu_device);
+ }
+ 
+-GlContext::StatusOrGlContext GlContext::Create(EGLContext share_context,
+-                                               bool create_thread) {
++// basically a ready to use GL context with option to run on its own thread
++// handles object lifetime, threading and device selection at framework level
++GlContext::StatusOrGlContext GlContext::Create(EGLContext share_context, // construct and fully initialise GLContext
++                                               bool create_thread, //true: spins up GL thread and runs work there
++                                               int gpu_device) {
+   std::shared_ptr<GlContext> context(new GlContext());
++  context->gpu_device_ = gpu_device;
+   MP_RETURN_IF_ERROR(context->CreateContext(share_context));
+   MP_RETURN_IF_ERROR(context->FinishInitialization(create_thread));
+   return std::move(context);
+ }
+ 
+-absl::Status GlContext::CreateContextInternal(EGLContext share_context,
++// handles purely EGL mechanics (like choosing config, creating gl es 2/3 with no policy)
++absl::Status GlContext::CreateContextInternal(EGLContext share_context, // selects EGL config 
+                                               int gl_version) {
+   ABSL_CHECK(gl_version == 2 || gl_version == 3);
+ 
+@@ -177,7 +216,7 @@ absl::Status GlContext::CreateContextInternal(EGLContext share_context,
+ }
+ 
+ absl::Status GlContext::CreateContext(EGLContext share_context) {
+-  MP_ASSIGN_OR_RETURN(display_, GetInitializedEglDisplay());
++  MP_ASSIGN_OR_RETURN(display_, GetInitializedEglDisplay(gpu_device_));
+ 
+   auto status = CreateContextInternal(share_context, 3);
+   if (!status.ok()) {
+diff --git a/mediapipe/gpu/gl_context_nsgl.cc b/mediapipe/gpu/gl_context_nsgl.cc
+index 8ea9f78a5..108b148a2 100644
+--- a/mediapipe/gpu/gl_context_nsgl.cc
++++ b/mediapipe/gpu/gl_context_nsgl.cc
+@@ -27,17 +27,20 @@
+ namespace mediapipe {
+ 
+ GlContext::StatusOrGlContext GlContext::Create(std::nullptr_t nullp,
+-                                               bool create_thread) {
+-  return Create(static_cast<NSOpenGLContext*>(nil), create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(static_cast<NSOpenGLContext*>(nil), create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(const GlContext& share_context,
+-                                               bool create_thread) {
+-  return Create(share_context.context_, create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(share_context.context_, create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(NSOpenGLContext* share_context,
+-                                               bool create_thread) {
++                                               bool create_thread,
++                                               int /*gpu_device*/) {
+   std::shared_ptr<GlContext> context(new GlContext());
+   MP_RETURN_IF_ERROR(context->CreateContext(share_context));
+   MP_RETURN_IF_ERROR(context->FinishInitialization(create_thread));
+diff --git a/mediapipe/gpu/gl_context_webgl.cc b/mediapipe/gpu/gl_context_webgl.cc
+index 93324fe27..9c3961e2f 100644
+--- a/mediapipe/gpu/gl_context_webgl.cc
++++ b/mediapipe/gpu/gl_context_webgl.cc
+@@ -31,17 +31,21 @@ namespace mediapipe {
+ 
+ // TODO: Handle webGL "context lost" and "context restored" events.
+ GlContext::StatusOrGlContext GlContext::Create(std::nullptr_t nullp,
+-                                               bool create_thread) {
+-  return Create(static_cast<EMSCRIPTEN_WEBGL_CONTEXT_HANDLE>(0), create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(static_cast<EMSCRIPTEN_WEBGL_CONTEXT_HANDLE>(0), create_thread,
++                gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(const GlContext& share_context,
+-                                               bool create_thread) {
+-  return Create(share_context.context_, create_thread);
++                                               bool create_thread,
++                                               int gpu_device) {
++  return Create(share_context.context_, create_thread, gpu_device);
+ }
+ 
+ GlContext::StatusOrGlContext GlContext::Create(
+-    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE share_context, bool create_thread) {
++    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE share_context, bool create_thread,
++    int /*gpu_device*/) {
+   std::shared_ptr<GlContext> context(new GlContext());
+   MP_RETURN_IF_ERROR(context->CreateContext(share_context));
+   MP_RETURN_IF_ERROR(context->FinishInitialization(create_thread));
+diff --git a/mediapipe/gpu/gpu_shared_data_internal.cc b/mediapipe/gpu/gpu_shared_data_internal.cc
+index 856c15755..569d519df 100644
+--- a/mediapipe/gpu/gpu_shared_data_internal.cc
++++ b/mediapipe/gpu/gpu_shared_data_internal.cc
+@@ -93,16 +93,18 @@ static const std::string& SharedContextKey() {
+   return *kSharedContextKey;
+ }
+ 
+-GpuResources::StatusOrGpuResources GpuResources::Create() {
+-  return Create(kPlatformGlContextNone);
++GpuResources::StatusOrGpuResources GpuResources::Create(int gpu_device) {
++  return Create(kPlatformGlContextNone, /*gpu_buffer_pool_options=*/nullptr,
++                gpu_device);
+ }
+ 
+ GpuResources::StatusOrGpuResources GpuResources::Create(
+     PlatformGlContext external_context,
+-    const MultiPoolOptions* gpu_buffer_pool_options) {
++    const MultiPoolOptions* gpu_buffer_pool_options, int gpu_device) {
+   MP_ASSIGN_OR_RETURN(
+       std::shared_ptr<GlContext> context,
+-      GlContext::Create(external_context, kGlContextUseDedicatedThread));
++      GlContext::Create(external_context, kGlContextUseDedicatedThread,
++                        gpu_device));
+   std::shared_ptr<GpuResources> gpu_resources(
+       new GpuResources(std::move(context), gpu_buffer_pool_options));
+   return gpu_resources;
+@@ -110,9 +112,9 @@ GpuResources::StatusOrGpuResources GpuResources::Create(
+ 
+ GpuResources::StatusOrGpuResources GpuResources::Create(
+     const GpuResources& gpu_resources,
+-    const MultiPoolOptions* gpu_buffer_pool_options) {
++    const MultiPoolOptions* gpu_buffer_pool_options, int gpu_device) {
+   return Create(gpu_resources.gl_context()->native_context(),
+-                gpu_buffer_pool_options);
++                gpu_buffer_pool_options, gpu_device);
+ }
+ 
+ GpuResources::GpuResources(std::shared_ptr<GlContext> gl_context,
+diff --git a/mediapipe/gpu/gpu_shared_data_internal.h b/mediapipe/gpu/gpu_shared_data_internal.h
+index 4867c61ca..edbc6737d 100644
+--- a/mediapipe/gpu/gpu_shared_data_internal.h
++++ b/mediapipe/gpu/gpu_shared_data_internal.h
+@@ -50,18 +50,20 @@ class GpuResources {
+  public:
+   using StatusOrGpuResources = absl::StatusOr<std::shared_ptr<GpuResources>>;
+ 
+-  static StatusOrGpuResources Create();
++  static StatusOrGpuResources Create(int gpu_device = -1);
+   // Optional gpu_buffer_pool_options argument allows to configure the
+   // GpuBufferMultiPool instance.
+   static StatusOrGpuResources Create(
+       PlatformGlContext external_context,
+-      const MultiPoolOptions* gpu_buffer_pool_options = nullptr);
++      const MultiPoolOptions* gpu_buffer_pool_options = nullptr,
++      int gpu_device = -1);
+ 
+   // Creates a GpuResources instance that is shared with the GL context provided
+   // by the gpu_resources argument.
+   static StatusOrGpuResources Create(
+       const GpuResources& gpu_resources,
+-      const MultiPoolOptions* gpu_buffer_pool_options = nullptr);
++      const MultiPoolOptions* gpu_buffer_pool_options = nullptr,
++      int gpu_device = -1);
+ 
+   // The destructor must be defined in the implementation file so that on iOS
+   // the correct ARC release calls are generated.
+diff --git a/mediapipe/python/__pycache__/__init__.cpython-313.pyc b/mediapipe/python/__pycache__/__init__.cpython-313.pyc
+new file mode 100644
+index 000000000..f3ebd6b48
+Binary files /dev/null and b/mediapipe/python/__pycache__/__init__.cpython-313.pyc differ
+diff --git a/mediapipe/tasks/cc/core/task_runner.h b/mediapipe/tasks/cc/core/task_runner.h
+index a5b40d2f2..6cd9e80c5 100644
+--- a/mediapipe/tasks/cc/core/task_runner.h
++++ b/mediapipe/tasks/cc/core/task_runner.h
+@@ -75,7 +75,7 @@ class TaskRunner {
+   // asynchronous method, Send(), to provide the input packets. If the packets
+   // callback is absent, clients must use the synchronous method, Process(), to
+   // provide the input packets and receive the output packets.
+-#if !MEDIAPIPE_DISABLE_GPU
++#if !MEDIAPIPE_DISABLE_GPU // go into this line
+   static absl::StatusOr<std::unique_ptr<TaskRunner>> Create(
+       CalculatorGraphConfig config,
+       std::unique_ptr<tflite::OpResolver> op_resolver = nullptr,
+diff --git a/mediapipe/tasks/python/core/base_options.py b/mediapipe/tasks/python/core/base_options.py
+index 728e61ede..87d2b9078 100644
+--- a/mediapipe/tasks/python/core/base_options.py
++++ b/mediapipe/tasks/python/core/base_options.py
+@@ -49,6 +49,9 @@ class BaseOptions:
+     model_asset_buffer: The model asset file contents as bytes.
+     delegate: Acceleration to use. Supported values are GPU and CPU. GPU support
+       is currently limited to Ubuntu platforms.
++    gpu_device: Optional GPU device ordinal. When using the GPU delegate this
++      specifies which CUDA device (e.g. ``0`` for ``cuda:0``) should be used.
++      If unset, the first available device is used.
+   """
+ 
+   class Delegate(enum.IntEnum):
+@@ -58,6 +61,7 @@ class BaseOptions:
+   model_asset_path: Optional[str] = None
+   model_asset_buffer: Optional[bytes] = None
+   delegate: Optional[Delegate] = None
++  gpu_device: Optional[Any] = None
+ 
+   @doc_controls.do_not_generate_docs
+   def to_pb2(self) -> _BaseOptionsProto:
+diff --git a/mediapipe/tasks/python/core/pybind/task_runner.cc b/mediapipe/tasks/python/core/pybind/task_runner.cc
+index 0de7d24d8..03e93b747 100644
+--- a/mediapipe/tasks/python/core/pybind/task_runner.cc
++++ b/mediapipe/tasks/python/core/pybind/task_runner.cc
+@@ -65,7 +65,8 @@ mode) or not (synchronous mode).)doc");
+   task_runner.def_static(
+       "create",
+       [](CalculatorGraphConfig graph_config,
+-         std::optional<py::function> packets_callback) {
++         std::optional<py::function> packets_callback,
++         int gpu_device) {
+         PacketsCallback callback = nullptr;
+         if (packets_callback.has_value()) {
+           callback =
+@@ -80,7 +81,7 @@ mode) or not (synchronous mode).)doc");
+         }
+ 
+ #if !MEDIAPIPE_DISABLE_GPU
+-        auto gpu_resources_ = mediapipe::GpuResources::Create();
++        auto gpu_resources_ = mediapipe::GpuResources::Create(gpu_device);
+         if (!gpu_resources_.ok()) {
+           ABSL_LOG(INFO) << "GPU suport is not available: "
+                          << gpu_resources_.status();
+@@ -113,13 +114,15 @@ Args:
+   graph_config: A MediaPipe task graph config protobuf object.
+   packets_callback: A user-defined packets callback function that takes a list
+      of output packets as the input argument.
++  gpu_device: The GPU device ordinal to run on. -1 uses the default device.
+ 
+ Raises:
+   RuntimeError: Any of the following:
+     a) The graph config proto is invalid.
+     b) The underlying medipaipe graph fails to initialize and start.
+ )doc",
+-      py::arg("graph_config"), py::arg("packets_callback") = py::none());
++      py::arg("graph_config"), py::arg("packets_callback") = py::none(),
++      py::arg("gpu_device") = -1);
+ 
+   task_runner.def(
+       "process",
+diff --git a/mediapipe/tasks/python/core/task_info.py b/mediapipe/tasks/python/core/task_info.py
+index bb1991808..6bbdbad3e 100644
+--- a/mediapipe/tasks/python/core/task_info.py
++++ b/mediapipe/tasks/python/core/task_info.py
+@@ -13,7 +13,7 @@
+ # limitations under the License.
+ """MediaPipe Tasks' task info data class."""
+ 
+-import dataclasses
++import dataclasses, os
+ from typing import Any, List
+ from google.protobuf import any_pb2
+ from mediapipe.calculators.core import flow_limiter_calculator_pb2
+@@ -43,7 +43,8 @@ class TaskInfo:
+ 
+   def generate_graph_config(
+       self,
+-      enable_flow_limiting: bool = False
++      enable_flow_limiting: bool = False,
++      gpu_device: int = 0
+   ) -> calculator_pb2.CalculatorGraphConfig:
+     """Generates a MediaPipe Task CalculatorGraphConfig proto from TaskInfo.
+ 
+@@ -102,11 +103,24 @@ class TaskInfo:
+       node_config.node_options.append(task_subgraph_options)
+ 
+     if not enable_flow_limiting:
+-      return calculator_pb2.CalculatorGraphConfig(
++      # return calculator_pb2.CalculatorGraphConfig(
++      config = calculator_pb2.CalculatorGraphConfig(
+           node=[node_config],
+           input_stream=self.input_streams,
+           output_stream=self.output_streams,
+       )
++
++      # new profiler setup
++      cfg = config.profiler_config
++      cfg.enable_profiler = True   
++      cfg.trace_enabled = True           
++      cfg.enable_stream_latency = True       
++      cfg.trace_log_path = f"/home/advaitaa/Desktop/realtimehandtracking/gpu_trace/mediapipe_trace_{gpu_device}_{os.getpid()}_"  # TODO: change absolute path
++      cfg.trace_log_count = 3 #200 # rotation
++      cfg.trace_log_interval_usec = 500000 #200000
++      cfg.trace_log_interval_count = 20 #5 
++
++      return config
+     # When a FlowLimiterCalculator is inserted to lower the overall graph
+     # latency, the task doesn't guarantee that each input must have the
+     # corresponding output.
+@@ -136,4 +150,15 @@ class TaskInfo:
+         input_stream=self.input_streams,
+         output_stream=self.output_streams,
+     )
++
++    # setup profiler here (with flow limiting)
++    cfg = config.profiler_config
++    cfg.enable_profiler = True   
++    cfg.trace_enabled = True           
++    cfg.enable_stream_latency = True       
++    cfg.trace_log_path = f"/home/advaitaa/Desktop/realtimehandtracking/gpu_trace/mediapipe_trace_{gpu_device}_{os.getpid()}_" # TODO: change absolute path
++    cfg.trace_log_count = 3 #200 # rotation
++    cfg.trace_log_interval_usec = 500000 #200000
++    cfg.trace_log_interval_count = 20 #5 
++
+     return config
+diff --git a/mediapipe/tasks/python/vision/core/base_vision_task_api.py b/mediapipe/tasks/python/vision/core/base_vision_task_api.py
+index a88c6350e..2462a4714 100644
+--- a/mediapipe/tasks/python/vision/core/base_vision_task_api.py
++++ b/mediapipe/tasks/python/vision/core/base_vision_task_api.py
+@@ -43,6 +43,7 @@ class BaseVisionTaskApi(object):
+       packet_callback: Optional[
+           Callable[[Mapping[str, packet_module.Packet]], None]
+       ] = None,
++      gpu_device: int = -1,
+   ) -> None:
+     """Initializes the `BaseVisionTaskApi` object.
+ 
+@@ -67,7 +68,7 @@ class BaseVisionTaskApi(object):
+           'The vision task is in image or video mode, a user-defined result '
+           'callback should not be provided.'
+       )
+-    self._runner = _TaskRunner.create(graph_config, packet_callback)
++    self._runner = _TaskRunner.create(graph_config, packet_callback, gpu_device)
+     self._running_mode = running_mode
+ 
+   def _process_image_data(
+diff --git a/mediapipe/tasks/python/vision/hand_landmarker.py b/mediapipe/tasks/python/vision/hand_landmarker.py
+index e781c8882..a199e2075 100644
+--- a/mediapipe/tasks/python/vision/hand_landmarker.py
++++ b/mediapipe/tasks/python/vision/hand_landmarker.py
+@@ -361,13 +361,25 @@ class HandLandmarker(base_vision_task_api.BaseVisionTaskApi):
+         ],
+         task_options=options,
+     )
++    gpu_device_id = -1
++    if options.base_options and options.base_options.gpu_device is not None:
++        device = options.base_options.gpu_device
++        try:
++            if isinstance(device, str):
++                gpu_device_id = int(device.split(":")[1]) if ":" in device else int(device)
++            else:
++                gpu_device_id = int(device)
++        except ValueError:
++            gpu_device_id = -1
+     return cls(
+         task_info.generate_graph_config(
+             enable_flow_limiting=options.running_mode
+-            == _RunningMode.LIVE_STREAM
++            == _RunningMode.LIVE_STREAM,
++            gpu_device=gpu_device_id
+         ),
+         options.running_mode,
+         packets_callback if options.result_callback else None,
++        gpu_device_id,
+     )
+ 
+   def detect(
+diff --git a/setup.py b/setup.py
+index e5422ffb6..c5b285d94 100644
+--- a/setup.py
++++ b/setup.py
+@@ -54,6 +54,8 @@ if IS_MAC:
+ 
+ GPU_OPTIONS = GPU_OPTIONS_DISBALED if MP_DISABLE_GPU else GPU_OPTIONS_ENBALED
+ 
++MP_VERSION = os.environ.get("MEDIAPIPE_PY_VERSION", "0.10.22.dev0")
++
+ 
+ def _normalize_path(path):
+   return path.replace('\\', '/') if IS_WINDOWS else path
+@@ -520,7 +522,7 @@ class Restore(setuptools.Command):
+ 
+ setuptools.setup(
+     name='mediapipe',
+-    version=__version__,
++    version=MP_VERSION, #__version__,
+     url='https://github.com/google/mediapipe',
+     description='MediaPipe is the simplest way for researchers and developers to build world-class ML solutions and applications for mobile, edge, cloud and the web.',
+     author='The MediaPipe Authors',
+diff --git a/third_party/BUILD b/third_party/BUILD
+index 2ab0a7d00..511fde86e 100644
+--- a/third_party/BUILD
++++ b/third_party/BUILD
+@@ -190,9 +190,9 @@ bzl_library(
+ OPENCV_MODULES = [
+     "calib3d",
+     "features2d",
+-    "highgui",
+-    "video",
+-    "videoio",
++    # "highgui",
++    # "video",
++    # "videoio",
+     "imgcodecs",
+     "imgproc",
+     "core",
+@@ -202,7 +202,7 @@ OPENCV_MODULES = [
+ # still only builds the shared libraries, so we have to choose one or the
+ # other. We build shared libraries by default, but this variable can be used
+ # to switch to static libraries.
+-OPENCV_SHARED_LIBS = True
++OPENCV_SHARED_LIBS = False
+ 
+ OPENCV_SO_VERSION = "3.4"
+ 
+@@ -267,16 +267,16 @@ cmake(
+         "-lz",
+         "-ltiff",
+         "-lImath",
+-        "-lIlmImf",
++        # "-lIlmImf",
+         "-lIex",
+-        "-lHalf",
++        # "-lHalf",
+         "-lIlmThread",
+         "-ldc1394",
+         "-lavcodec",
+         "-lavformat",
+         "-lavutil",
+         "-lswscale",
+-        "-lavresample",
++        # "-lavresample",
+         "-ldl",
+         "-lm",
+         "-lpthread",

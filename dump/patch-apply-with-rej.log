@@ -1,0 +1,105 @@
+ॐ ❯ git apply --ignore-whitespace --ignore-space-change --reject dual_gpu.patch
+dual_gpu.patch:119: trailing whitespace.
+import mediapipe.python.solutions as solutions
+dual_gpu.patch:334: trailing whitespace.
+absl::Status GlContext::CreateContextInternal(EGLContext share_context, // selects EGL config
+dual_gpu.patch:591: trailing whitespace.
+      cfg.enable_profiler = True
+dual_gpu.patch:592: trailing whitespace.
+      cfg.trace_enabled = True
+dual_gpu.patch:593: trailing whitespace.
+      cfg.enable_stream_latency = True
+Checking patch .gitignore...
+Checking patch .vscode/settings.json...
+Checking patch dist/mediapipe-0.10.22.dev0-cp311-cp311-linux_x86_64.whl... error: cannot apply binary patch to 'dist/mediapipe-0.10.22.dev0-cp311-cp311-linux_x86_64.whl' without full index line error: dist/mediapipe-0.10.22.dev0-cp311-cp311-linux_x86_64.whl: patch does not apply Checking patch mediapipe/__init__.py...
+Checking patch mediapipe/__pycache__/__init__.cpython-313.pyc...
+error: cannot apply binary patch to 'mediapipe/__pycache__/__init__.cpython-313.pyc' without full index line
+error: mediapipe/__pycache__/__init__.cpython-313.pyc: patch does not apply
+Checking patch mediapipe/gpu/gl_context.h...
+Checking patch mediapipe/gpu/gl_context_eagl.cc...
+Checking patch mediapipe/gpu/gl_context_egl.cc...
+Checking patch mediapipe/gpu/gl_context_nsgl.cc...
+Checking patch mediapipe/gpu/gl_context_webgl.cc...
+Checking patch mediapipe/gpu/gpu_shared_data_internal.cc...
+Checking patch mediapipe/gpu/gpu_shared_data_internal.h...
+Checking patch mediapipe/python/__pycache__/__init__.cpython-313.pyc...
+error: cannot apply binary patch to 'mediapipe/python/__pycache__/__init__.cpython-313.pyc' without full index line
+error: mediapipe/python/__pycache__/__init__.cpython-313.pyc: patch does not apply
+Checking patch mediapipe/tasks/cc/core/task_runner.h...
+Checking patch mediapipe/tasks/python/core/base_options.py...
+Hunk #1 succeeded at 39 (offset -10 lines).
+error: while searching for:
+  model_asset_path: Optional[str] = None
+  model_asset_buffer: Optional[bytes] = None
+  delegate: Optional[Delegate] = None
+
+  @doc_controls.do_not_generate_docs
+  def to_pb2(self) -> _BaseOptionsProto:
+
+error: patch failed: mediapipe/tasks/python/core/base_options.py:58
+Checking patch mediapipe/tasks/python/core/pybind/task_runner.cc...
+error: mediapipe/tasks/python/core/pybind/task_runner.cc: No such file or directory
+Checking patch mediapipe/tasks/python/core/task_info.py...
+error: mediapipe/tasks/python/core/task_info.py: No such file or directory
+Checking patch mediapipe/tasks/python/vision/core/base_vision_task_api.py...
+error: mediapipe/tasks/python/vision/core/base_vision_task_api.py: No such file or directory
+Checking patch mediapipe/tasks/python/vision/hand_landmarker.py...
+error: while searching for:
+        ],
+        task_options=options,
+    )
+    return cls(
+        task_info.generate_graph_config(
+            enable_flow_limiting=options.running_mode
+            == _RunningMode.LIVE_STREAM
+        ),
+        options.running_mode,
+        packets_callback if options.result_callback else None,
+    )
+
+  def detect(
+
+error: patch failed: mediapipe/tasks/python/vision/hand_landmarker.py:361
+Checking patch setup.py...
+error: while searching for:
+
+GPU_OPTIONS = GPU_OPTIONS_DISBALED if MP_DISABLE_GPU else GPU_OPTIONS_ENBALED
+
+
+def _normalize_path(path):
+  return path.replace('\\', '/') if IS_WINDOWS else path
+
+error: patch failed: setup.py:54
+error: while searching for:
+
+setuptools.setup(
+    name='mediapipe',
+    version=__version__,
+    url='https://github.com/google/mediapipe',
+    description='MediaPipe is the simplest way for researchers and developers to build world-class ML solutions and applications for mobile, edge, cloud and the web.',
+    author='The MediaPipe Authors',
+
+error: patch failed: setup.py:520
+Checking patch third_party/BUILD...
+Applied patch .gitignore cleanly.
+Applied patch .vscode/settings.json cleanly.
+Applied patch mediapipe/__init__.py cleanly.
+Applied patch mediapipe/gpu/gl_context.h cleanly.
+Applied patch mediapipe/gpu/gl_context_eagl.cc cleanly.
+Applied patch mediapipe/gpu/gl_context_egl.cc cleanly.
+Applied patch mediapipe/gpu/gl_context_nsgl.cc cleanly.
+Applied patch mediapipe/gpu/gl_context_webgl.cc cleanly.
+Applied patch mediapipe/gpu/gpu_shared_data_internal.cc cleanly.
+Applied patch mediapipe/gpu/gpu_shared_data_internal.h cleanly.
+Applied patch mediapipe/tasks/cc/core/task_runner.h cleanly.
+Applying patch mediapipe/tasks/python/core/base_options.py with 1 reject...
+Hunk #1 applied cleanly.
+Rejected hunk #2.
+Applying patch mediapipe/tasks/python/vision/hand_landmarker.py with 1 reject...
+Rejected hunk #1.
+Applying patch setup.py with 2 rejects...
+Rejected hunk #1.
+Rejected hunk #2.
+Applied patch third_party/BUILD cleanly.
+~/Projects/consulting/robotics/code/mediapipe feat/unify-patches !12 ?6                                                      L 14.20 RAM 4.04G SWP 498M █ 100% 19:27:55
+ॐ ❯                                                                                                                                                                   🪷

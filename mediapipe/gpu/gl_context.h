@@ -22,6 +22,8 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 
 #include "absl/base/attributes.h"
 #include "absl/base/thread_annotations.h"
@@ -40,6 +42,7 @@
 #include "mediapipe/gpu/attachments.h"
 #include "mediapipe/gpu/gl_base.h"
 #include "mediapipe/gpu/gpu_buffer_format.h"
+
 
 #ifdef __APPLE__
 #include <CoreVideo/CoreVideo.h>
@@ -167,14 +170,15 @@ class GlContext : public std::enable_shared_from_this<GlContext> {
   //
   // If create_thread is true, the context will create a thread and run all
   // OpenGL tasks on it.
-  static StatusOrGlContext Create(std::nullptr_t nullp, bool create_thread);
+  static StatusOrGlContext Create(std::nullptr_t nullp, bool create_thread,
+                                  int gpu_device = -1);
   static StatusOrGlContext Create(const GlContext& share_context,
-                                  bool create_thread);
+                                  bool create_thread, int gpu_device = -1);
   static StatusOrGlContext Create(PlatformGlContext share_context,
-                                  bool create_thread);
+                                  bool create_thread, int gpu_device = -1);
 #if HAS_EAGL
   static StatusOrGlContext Create(EAGLSharegroup* sharegroup,
-                                  bool create_thread);
+                                  bool create_thread, int gpu_device = -1);
 #endif  // HAS_EAGL
 
   // Returns the GlContext that is current on this thread. May return nullptr.
@@ -360,6 +364,7 @@ class GlContext : public std::enable_shared_from_this<GlContext> {
   EGLConfig config_;
   EGLSurface surface_ = EGL_NO_SURFACE;
   EGLContext context_ = EGL_NO_CONTEXT;
+  int gpu_device_ = -1;
 #elif HAS_EAGL
   absl::Status CreateContext(EAGLSharegroup* sharegroup);
 
