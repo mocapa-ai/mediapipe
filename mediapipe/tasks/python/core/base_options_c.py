@@ -23,4 +23,5 @@ class BaseOptionsC(ctypes.Structure):
       ("model_asset_buffer_count", ctypes.c_uint),
       ("model_asset_path", ctypes.c_char_p),
       ("delegate", ctypes.c_int),
+      ("gpu_device", ctypes.c_int),
   ]

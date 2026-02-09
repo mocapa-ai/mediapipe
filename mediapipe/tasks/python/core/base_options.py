@@ -51,6 +51,7 @@ class BaseOptions:
   model_asset_path: Optional[str] = None
   model_asset_buffer: Optional[bytes] = None
   delegate: Optional[Delegate] = None
+  gpu_device: Optional[object] = None
 
   @doc_controls.do_not_generate_docs
   def to_ctypes(self) -> base_options_c_lib.BaseOptionsC:
@@ -64,6 +65,20 @@ class BaseOptions:
         self.model_asset_path.encode('utf-8') if self.model_asset_path else None
     )
     options.delegate = self.delegate.value if self.delegate else 0
+
+    gpu_device_id = -1
+    if getattr(self, "gpu_device", None) is not None:
+        d = self.gpu_device
+        try:
+            if isinstance(d, str):
+                gpu_device_id = int(d.split(":")[1]) if ":" in d else int(d)
+            else:
+                gpu_device_id = int(d)
+        except (ValueError, TypeError, IndexError):
+            gpu_device_id = -1
+
+    options.gpu_device = gpu_device_id
+
     return options
 
   def __eq__(self, other: Any) -> bool:
@@ -81,4 +96,5 @@ class BaseOptions:
         self.model_asset_path == other.model_asset_path
         and self.model_asset_buffer == other.model_asset_buffer
         and self.delegate == other.delegate
+        and self.gpu_device == other.gpu_device
     )
