@@ -40,7 +40,6 @@ MP_THIRD_PARTY_BUILD = os.path.join(MP_ROOT_PATH, 'third_party/BUILD')
 MP_ROOT_INIT_PY = os.path.join(MP_ROOT_PATH, '__init__.py')
 
 GPU_OPTIONS_DISABLED = ['--define=MEDIAPIPE_DISABLE_GPU=1']
-
 GPU_OPTIONS_ENABLED = [
     '--copt=-DTFLITE_GPU_EXTRA_GLES_DEPS',
     '--copt=-DMEDIAPIPE_OMIT_EGL_WINDOW_BIT',
@@ -53,7 +52,6 @@ if IS_MAC:
   )
 
 GPU_OPTIONS = GPU_OPTIONS_DISABLED if MP_DISABLE_GPU else GPU_OPTIONS_ENABLED
-MP_VERSION = os.environ.get("MEDIAPIPE_PY_VERSION", "0.0.0.dev20260209")
 
 
 def _normalize_path(path):
@@ -131,34 +129,21 @@ def _modify_opencv_cmake_rule(link_opencv):
     build_file.write(content)
     build_file.close()
 
-
 def _add_mp_init_files():
   """Add __init__.py to mediapipe root directories to make the subdirectories indexable."""
   # Ensure repo-root __init__.py exists (some packaging flows expect it).
   os.makedirs(os.path.dirname(MP_ROOT_INIT_PY), exist_ok=True)
   open(MP_ROOT_INIT_PY, 'a').close()
-  
-  # open(MP_ROOT_INIT_PY, 'w').close()
-  # # Save the original mediapipe/__init__.py file.
-  # shutil.copyfile(MP_DIR_INIT_PY, _get_backup_file(MP_DIR_INIT_PY))
-  # mp_dir_init_file = open(MP_DIR_INIT_PY, 'a')
-  # mp_dir_init_file.writelines([
-  #     '\n', 'from mediapipe.python import *\n',
-  #     'import mediapipe.python.solutions as solutions \n',
-  #     'import mediapipe.tasks.python as tasks\n', '\n\n', 'del framework\n',
-  #     'del gpu\n', 'del modules\n', 'del python\n', 'del mediapipe\n',
-  #     'del util\n', '__version__ = \'{}\''.format(__version__), '\n'
-  # ])
-  # mp_dir_init_file.close()
+
+  # DO NOT mutate mediapipe/__init__.py (avoid repeated appends / dirty tree).
+  # If you want version exposure, do it via setuptools metadata instead.
 
 
 def _copy_to_build_lib_dir(build_lib, file):
   """Copy a file from bazel-bin to the build lib dir."""
-  dst = os.path.join(build_lib + '/', file)
-  dst_dir = os.path.dirname(dst)
-  if not os.path.exists(dst_dir):
-    os.makedirs(dst_dir)
-  shutil.copyfile(os.path.join('bazel-bin/', file), dst)
+  dst = os.path.join(build_lib, file)
+  os.makedirs(os.path.dirname(dst), exist_ok=True)
+  shutil.copyfile(os.path.join('bazel-bin', file), dst)
 
 
 def _invoke_shell_command(shell_commands):
@@ -358,12 +343,10 @@ class GenerateMetadataSchema(build_ext.build_ext):
 class BazelExtension(setuptools.Extension):
   """A C/C++ extension that is defined as a Bazel BUILD target."""
 
-  def __init__(self, bazel_target, target_name=''):
+  def __init__(self, bazel_target):
     self.bazel_target = bazel_target
     self.relpath, self.target_name = (
         posixpath.relpath(bazel_target, '//').split(':'))
-    if target_name:
-      self.target_name = target_name
     ext_name = os.path.join(
         self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
     setuptools.Extension.__init__(self, ext_name, sources=[])
@@ -388,48 +371,24 @@ class BuildExtension(build_ext.build_ext):
     _check_bazel()
     if IS_MAC:
       for ext in self.extensions:
-        target_name = self.get_ext_fullpath(ext.name)
-        # Build x86
-        self._build_binary(
-            ext,
-            ['--cpu=darwin', '--ios_multi_cpus=i386,x86_64,armv7,arm64'],
-        )
-        x86_name = self.get_ext_fullpath(ext.name)
-        # Build Arm64
-        ext.name = ext.name + '.arm64'
         self._build_binary(
             ext,
             ['--cpu=darwin_arm64', '--ios_multi_cpus=i386,x86_64,armv7,arm64'],
         )
-        arm64_name = self.get_ext_fullpath(ext.name)
-        # Merge architectures
-        lipo_command = [
-            'lipo',
-            '-create',
-            '-output',
-            target_name,
-            x86_name,
-            arm64_name,
-        ]
-        _invoke_shell_command(lipo_command)
-        # Delete the arm64 file (the x86 file was overwritten by lipo)
-        _invoke_shell_command(['rm', arm64_name])
     else:
       for ext in self.extensions:
         self._build_binary(ext)
-    build_ext.build_ext.run(self)
 
   def _build_binary(self, ext, extra_args=None):
-    if not os.path.exists(self.build_temp):
-      os.makedirs(self.build_temp)
+    os.makedirs(self.build_temp, exist_ok=True)
     bazel_command = [
         'bazel',
         'build',
         '--compilation_mode=opt',
         '--copt=-DNDEBUG',
         '--keep_going',
-        '--action_env=PYTHON_BIN_PATH=' + _normalize_path(sys.executable),
-        str(ext.bazel_target + '.so'),
+        '--define=ENABLE_ODML_CONVERTER=0',
+        str(ext.bazel_target),
     ] + GPU_OPTIONS
 
     if extra_args:
@@ -438,9 +397,12 @@ class BuildExtension(build_ext.build_ext):
       bazel_command.append('--define=OPENCV=source')
 
     _invoke_shell_command(bazel_command)
-    ext_bazel_bin_path = os.path.join('bazel-bin', ext.relpath,
-                                      ext.target_name + '.so')
-    ext_dest_path = self.get_ext_fullpath(ext.name)
+
+    ext_bazel_bin_path = os.path.join(
+        'bazel-bin', ext.relpath, ext.target_name
+    )
+
+    ext_dest_path = os.path.join(self.build_lib, ext.relpath, ext.target_name)
     ext_dest_dir = os.path.dirname(ext_dest_path)
     if not os.path.exists(ext_dest_dir):
       os.makedirs(ext_dest_dir)
@@ -449,6 +411,12 @@ class BuildExtension(build_ext.build_ext):
       for opencv_dll in glob.glob(
           os.path.join('bazel-bin', ext.relpath, '*opencv*.dll')):
         shutil.copy(opencv_dll, ext_dest_dir)
+
+    # Now create an empty __init__.py file in the extension directory to make
+    # the extension directory indexable.
+    init_file_path = os.path.join(ext_dest_dir, '__init__.py')
+    with open(init_file_path, 'w') as f:
+      f.write('"""Empty __init__.py file"""')
 
 
 class BuildPy(build_py.build_py):
@@ -469,13 +437,13 @@ class BuildPy(build_py.build_py):
   def run(self):
     _modify_opencv_cmake_rule(self.link_opencv)
     _add_mp_init_files()
-    build_modules_obj = self.distribution.get_command_obj('build_modules')
-    build_modules_obj.link_opencv = self.link_opencv
-    build_ext_obj = self.distribution.get_command_obj('build_ext')
-    build_ext_obj.link_opencv = self.link_opencv
     self.run_command('gen_protos')
     self.run_command('generate_metadata_schema')
-    self.run_command('build_modules')
+
+    # Propagate link_opencv into build_ext, because build_py triggers build_ext.
+    build_ext_obj = self.distribution.get_command_obj('build_ext')
+    build_ext_obj.link_opencv = self.link_opencv
+
     self.run_command('build_ext')
     build_py.build_py.run(self)
     self.run_command('restore')
@@ -527,9 +495,13 @@ class Restore(setuptools.Command):
 
 setuptools.setup(
     name='mediapipe',
-    version=MP_VERSION, #__version__,
+    version=__version__,
     url='https://github.com/google/mediapipe',
-    description='MediaPipe is the simplest way for researchers and developers to build world-class ML solutions and applications for mobile, edge, cloud and the web.',
+    description=(
+        'MediaPipe is the simplest way for researchers and developers to build'
+        ' world-class ML solutions and applications for mobile, edge, cloud and'
+        ' the web.'
+    ),
     author='The MediaPipe Authors',
     author_email='mediapipe@google.com',
     long_description=_get_long_description(),
@@ -546,14 +518,11 @@ setuptools.setup(
             'mediapipe.tasks.python.genai.*',
             'mediapipe.tasks.python.test.*',
             'mediapipe.tasks.benchmark.*',
-            'mediapipe.examples.desktop.*', 
-            'mediapipe.model_maker.*',
         ],
     ),
     install_requires=_parse_requirements('requirements.txt'),
     cmdclass={
         'build_py': BuildPy,
-        'build_modules': BuildModules,
         'build_ext': BuildExtension,
         'generate_metadata_schema': GenerateMetadataSchema,
         'gen_protos': GeneratePyProtos,
@@ -561,12 +530,8 @@ setuptools.setup(
         'restore': Restore,
     },
     ext_modules=[
-        BazelExtension('//mediapipe/python:_framework_bindings'),
-        BazelExtension(
-            '//mediapipe/tasks/cc/metadata/python:_pywrap_metadata_version'),
-        # BazelExtension(
-        #     '//mediapipe/tasks/python/metadata/flatbuffers_lib:_pywrap_flatbuffers'
-        # ),
+      BazelExtension('//mediapipe/python:_framework_bindings.so'),
+      BazelExtension('//mediapipe/tasks/c:libmediapipe.so'),
     ],
     zip_safe=False,
     include_package_data=True,

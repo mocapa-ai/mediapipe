@@ -99,8 +99,8 @@ OpenGL ES profile extensions:
 export PYTHON_BIN_PATH="$(which python)"
 
 # Build with bazel
-bazel clean
-## note: don't run --expunge
+rm -rf build dist *.egg-info
+bazel clean --expunge
 
 export MEDIAPIPE_DISABLE_GPU=0
 
@@ -143,12 +143,14 @@ bazel build -c opt \
 # HACKY: copy this .so file
 cp -v bazel-bin/mediapipe/tasks/c/libmediapipe.so mediapipe/tasks/c/
 
-python setup.py bdist_wheel
+# python setup.py bdist_wheel
+python setup.py build_ext --link-opencv build_py --link-opencv bdist_wheel
+
 
 # Check wheel contents
 python - <<'PY'
 import zipfile
-z = zipfile.ZipFile("dist/mediapipe-0.0.0.dev20260207-cp311-cp311-linux_x86_64.whl")
+z = zipfile.ZipFile("dist/mediapipe-0.0.0.dev20260209-cp311-cp311-linux_x86_64.whl")
 for n in z.namelist():
     if "solutions" in n or "_framework_bindings" in n:
         print(n)
