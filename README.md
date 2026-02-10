@@ -2,6 +2,176 @@ Welcome to Mocapa's fork of Mediapipe.
 
 It adds in gpu selection support. 
 
+Build instructions - [reference](https://github.com/google-ai-edge/mediapipe/blob/master/docs/getting_started/install.md)
+1. Bazelisk installation: 
+```bash
+curl -L https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 \
+  -o bazelisk
+
+# make it executable
+chmod +x bazelisk
+
+# move to your path
+sudo mv bazelisk /usr/local/bin/bazelisk
+
+# verify version
+bazelisk version
+
+# make `bazel` point to `bazelisk`
+sudo ln -sf /usr/local/bin/bazelisk /usr/local/bin/bazel
+
+```
+
+2. Install OpenCV 4.6 and FFmpeg
+```bash
+sudo apt-get update
+
+sudo apt-get install -y \
+    libopencv-core-dev \
+    libopencv-highgui-dev \
+    libopencv-calib3d-dev \
+    libopencv-features2d-dev \
+    libopencv-imgproc-dev \
+    libopencv-video-dev \
+    libopencv-contrib-dev \
+    libopencv-dev \
+    pkg-config \
+    protobuf-compiler
+
+
+# verify version
+pkg-config --modversion opencv4
+```
+
+3. Enable GPU support - [reference](https://ai.google.dev/edge/mediapipe/framework/getting_started/gpu_support)
+```bash
+sudo apt-get install -y \
+  mesa-common-dev libegl1-mesa-dev libgles2-mesa-dev mesa-utils
+
+# verify outputs
+glxinfo | grep -i opengl
+## sample output:
+OpenGL ES profile version string: OpenGL ES 3.2 NVIDIA 580.126.09
+OpenGL ES profile shading language version string: OpenGL ES GLSL ES 3.20
+OpenGL ES profile extensions:
+```
+
+4. Test a simple Hello World build
+   1. Test build with GPU-enabled build flags
+   ```bash
+   bazel clean --expunge
+   bazel build -c opt \
+     --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 \
+     mediapipe/examples/desktop/hello_world:hello_world
+   ```
+
+   - Fixing some yarn/npm fetch issues (could be China-only issue)
+       ```bash
+       # force yarn/node to prefer IPv4
+       echo 'export NODE_OPTIONS=--dns-result-order=ipv4first' >> ~/.bashrc
+       source ~/.bashrc
+
+       # set stable DNS
+       sudo mkdir -p /etc/systemd/resolved.conf.d
+       sudo tee /etc/systemd/resolved.conf.d/dns.conf >/dev/null <<'EOF'
+       [Resolve]
+       DNS=1.1.1.1 8.8.8.8
+       FallbackDNS=9.9.9.9
+       EOF
+       sudo systemctl restart systemd-resolved
+
+       # verify npm registry resolves
+       getent hosts registry.npmjs.org
+       curl -I https://registry.npmjs.org/foreground-child/-/foreground-child-2.0.0.tgz
+       ## both of these should return quickly
+
+       ## Re-do step 4 again.
+       ```
+
+   2. Test run Hello World build
+   ```bash
+   ./bazel-bin/mediapipe/examples/desktop/hello_world/hello_world
+   ```
+
+5. Build full package
+```bash
+# in your python environment
+export PYTHON_BIN_PATH="$(which python)"
+
+# Build with bazel
+rm -rf build dist *.egg-info
+bazel clean --expunge
+
+export MEDIAPIPE_DISABLE_GPU=0
+
+# bazel build -c opt \
+#   --define MEDIAPIPE_DISABLE_GPU=0 \
+#   --define MEDIAPIPE_PROFILING=1 \
+#   --copt -DMESA_EGL_NO_X11_HEADERS \
+#   --copt -DEGL_NO_X11 \
+#   --action_env PYTHON_BIN_PATH=$(which python3) \
+#   //mediapipe/tasks:internal
+
+# bazel build -c opt \
+#   --define MEDIAPIPE_DISABLE_GPU=0 \
+#   --define MEDIAPIPE_PROFILING=1 \
+#   --copt -DMESA_EGL_NO_X11_HEADERS \
+#   --copt -DEGL_NO_X11 \
+#   --action_env PYTHON_BIN_PATH=$(which python3) \
+#   //mediapipe/gpu:gl_context
+
+
+bazel build -c opt \
+  --define MEDIAPIPE_DISABLE_GPU=0 \
+  --define MEDIAPIPE_PROFILING=1 \
+  --copt -DMESA_EGL_NO_X11_HEADERS \
+  --copt -DEGL_NO_X11 \
+  --action_env PYTHON_BIN_PATH=$(which python3) \
+  //mediapipe/python:_framework_bindings
+
+# Check if the .so files are built
+ls bazel-bin/mediapipe/python/_framework_bindings*.so
+
+bazel build -c opt \
+  --define MEDIAPIPE_DISABLE_GPU=0 \
+  --define MEDIAPIPE_PROFILING=1 \
+  --copt -DMESA_EGL_NO_X11_HEADERS \
+  --copt -DEGL_NO_X11 \
+  --action_env PYTHON_BIN_PATH=$(which python3) \
+  //mediapipe/tasks/c:libmediapipe.so
+
+# HACKY: copy this .so file
+cp -v bazel-bin/mediapipe/tasks/c/libmediapipe.so mediapipe/tasks/c/
+
+# python setup.py bdist_wheel
+python setup.py build_ext --link-opencv build_py --link-opencv bdist_wheel
+
+
+# Check wheel contents
+python - <<'PY'
+import zipfile
+z = zipfile.ZipFile("dist/mediapipe-0.0.0.dev20260209-cp311-cp311-linux_x86_64.whl")
+for n in z.namelist():
+    if "solutions" in n or "_framework_bindings" in n:
+        print(n)
+PY
+# You must see `mediapipe/python/_framework_bindings*.so` and `mediapipe/solutions/__init__.py`
+
+```
+
+
+1. Install wheel
+```bash
+# Install new wheel:
+# in your python env
+pip install dist/*.whl --force-reinstall
+# or add to uv
+uv add
+
+
+# Check GPU delegate path works
+python test_gpu_device.py
+## expected output: 
 ------
 
 

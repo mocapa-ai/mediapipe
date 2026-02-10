@@ -9,3 +9,4 @@ build
 mediapipe.egg-info
 dist
 /.vscode/
+*.pyc
